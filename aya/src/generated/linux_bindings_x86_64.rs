@@ -1765,7 +1765,9 @@ pub enum _bindgen_ty_97 {
     TCA_DUMP_INVISIBLE = 10,
     TCA_CHAIN = 11,
     TCA_HW_OFFLOAD = 12,
-    __TCA_MAX = 13,
+    TCA_INGRESS_BLOCK = 13,
+    TCA_EGRESS_BLOCK = 14,
+    __TCA_MAX = 15,
 }
 pub const TCA_BPF_UNSPEC: _bindgen_ty_153 = _bindgen_ty_153::TCA_BPF_UNSPEC;
 pub const TCA_BPF_ACT: _bindgen_ty_153 = _bindgen_ty_153::TCA_BPF_ACT;
