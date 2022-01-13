@@ -18,7 +18,7 @@ pub mod stack_trace;
 
 pub use array::Array;
 pub use hash_map::{HashMap, LruHashMap, LruPerCpuHashMap, PerCpuHashMap};
-pub use lpm_trie::LpmTrie;
+pub use lpm_trie::{Key as LpmTrieKey, LpmTrie};
 pub use per_cpu_array::PerCpuArray;
 pub use perf::{PerfEventArray, PerfEventByteArray};
 pub use program_array::ProgramArray;
