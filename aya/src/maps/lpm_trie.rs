@@ -3,7 +3,7 @@ use std::{convert::TryFrom, marker::PhantomData, mem, ops::Deref};
 
 use crate::{
     generated::{bpf_lpm_trie_key, bpf_map_type::BPF_MAP_TYPE_LPM_TRIE},
-    maps::{Map, IterableMap, MapError, MapRef, MapRefMut},
+    maps::{IterableMap, Map, MapError, MapRef, MapRefMut},
     sys::{bpf_map_delete_elem, bpf_map_lookup_elem, bpf_map_update_elem},
     Pod,
 };
@@ -32,11 +32,18 @@ pub struct LpmTrie<T: Deref<Target = Map>, K, V> {
     _v: PhantomData<V>,
 }
 
-#[derive(Clone, Copy)]
 #[repr(packed)]
 pub struct Key<K: Pod> {
     pub key_base: bpf_lpm_trie_key,
     pub data: K,
+}
+
+impl<K: Pod> Copy for Key<K> {}
+
+impl<K: Pod> Clone for Key<K> {
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<K: Pod> Key<K> {
@@ -123,7 +130,6 @@ impl<T: Deref<Target = Map>, K: Pod, V: Pod> LpmTrie<T, K, V> {
             })
     }
 }
-
 
 impl<T: Deref<Target = Map>, K: Pod, V: Pod> IterableMap<K, V> for LpmTrie<T, K, V> {
     fn map(&self) -> &Map {
