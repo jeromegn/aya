@@ -48,6 +48,13 @@ pub mod bindings {
         pub id: ::aya_bpf_cty::c_uint,
         pub pinning: ::aya_bpf_cty::c_uint,
     }
+
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone)]
+    pub struct bpf_lpm_trie_key {
+        pub prefixlen: ::aya_bpf_cty::c_uint,
+        pub data: [u8; 0],
+    }
 }
 
 use aya_bpf_cty::{c_long, c_void};

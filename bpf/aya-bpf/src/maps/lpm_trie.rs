@@ -3,7 +3,7 @@ use core::{marker::PhantomData, mem, ptr::NonNull};
 use aya_bpf_cty::{c_long, c_void};
 
 use crate::{
-    bindings::{bpf_map_def, bpf_map_type::BPF_MAP_TYPE_LPM_TRIE},
+    bindings::{bpf_lpm_trie_key, bpf_map_def, bpf_map_type::BPF_MAP_TYPE_LPM_TRIE},
     helpers::{bpf_map_delete_elem, bpf_map_lookup_elem, bpf_map_update_elem},
     maps::PinningType,
 };
@@ -13,6 +13,24 @@ pub struct LpmTrie<K, V> {
     def: bpf_map_def,
     _k: PhantomData<K>,
     _v: PhantomData<V>,
+}
+
+#[repr(packed)]
+pub struct Key<K> {
+    pub key_base: bpf_lpm_trie_key,
+    pub data: K,
+}
+
+impl<K> Key<K> {
+    pub fn new(prefixlen: u32, data: K) -> Self {
+        Self {
+            key_base: bpf_lpm_trie_key {
+                prefixlen: prefixlen,
+                data: Default::default(),
+            },
+            data: data,
+        }
+    }
 }
 
 impl<K, V> LpmTrie<K, V> {
@@ -38,17 +56,17 @@ impl<K, V> LpmTrie<K, V> {
     }
 
     #[inline]
-    pub fn get(&mut self, key: &K) -> Option<&V> {
+    pub fn get(&mut self, key: &Key<K>) -> Option<&V> {
         get(&mut self.def, key)
     }
 
     #[inline]
-    pub fn insert(&mut self, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
+    pub fn insert(&mut self, key: &Key<K>, value: &V, flags: u64) -> Result<(), c_long> {
         insert(&mut self.def, key, value, flags)
     }
 
     #[inline]
-    pub fn remove(&mut self, key: &K) -> Result<(), c_long> {
+    pub fn remove(&mut self, key: &Key<K>) -> Result<(), c_long> {
         remove(&mut self.def, key)
     }
 }
@@ -56,7 +74,7 @@ impl<K, V> LpmTrie<K, V> {
 const fn build_def<K, V>(ty: u32, max_entries: u32, flags: u32, pin: PinningType) -> bpf_map_def {
     bpf_map_def {
         type_: ty,
-        key_size: mem::size_of::<K>() as u32,
+        key_size: mem::size_of::<Key<K>>() as u32,
         value_size: mem::size_of::<V>() as u32,
         max_entries,
         map_flags: flags,
@@ -66,7 +84,7 @@ const fn build_def<K, V>(ty: u32, max_entries: u32, flags: u32, pin: PinningType
 }
 
 #[inline]
-fn get<'a, K, V>(def: &mut bpf_map_def, key: &K) -> Option<&'a V> {
+fn get<'a, K, V>(def: &mut bpf_map_def, key: &Key<K>) -> Option<&'a V> {
     unsafe {
         let value = bpf_map_lookup_elem(def as *mut _ as *mut _, key as *const _ as *const c_void);
         // FIXME: alignment
@@ -75,7 +93,7 @@ fn get<'a, K, V>(def: &mut bpf_map_def, key: &K) -> Option<&'a V> {
 }
 
 #[inline]
-fn insert<K, V>(def: &mut bpf_map_def, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
+fn insert<K, V>(def: &mut bpf_map_def, key: &Key<K>, value: &V, flags: u64) -> Result<(), c_long> {
     let ret = unsafe {
         bpf_map_update_elem(
             def as *mut _ as *mut _,
@@ -88,7 +106,7 @@ fn insert<K, V>(def: &mut bpf_map_def, key: &K, value: &V, flags: u64) -> Result
 }
 
 #[inline]
-fn remove<K>(def: &mut bpf_map_def, key: &K) -> Result<(), c_long> {
+fn remove<K>(def: &mut bpf_map_def, key: &Key<K>) -> Result<(), c_long> {
     let ret =
         unsafe { bpf_map_delete_elem(def as *mut _ as *mut _, key as *const _ as *const c_void) };
     (ret >= 0).then(|| ()).ok_or(ret)
