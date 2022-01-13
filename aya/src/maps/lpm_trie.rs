@@ -121,7 +121,7 @@ impl<T: Deref<Target = Map>, K: Pod, V: Pod> LpmTrie<T, K, V> {
     /// Deletes elements from the map by key.
     pub fn remove(&self, key: &Key<K>) -> Result<(), MapError> {
         let fd = self.inner.deref().fd_or_err()?;
-        bpf_map_delete_elem(fd, &key)
+        bpf_map_delete_elem(fd, key)
             .map(|_| ())
             .map_err(|(code, io_error)| MapError::SyscallError {
                 call: "bpf_map_delete_elem".to_owned(),
