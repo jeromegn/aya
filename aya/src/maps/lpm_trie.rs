@@ -71,7 +71,7 @@ impl<T: Deref<Target = Map>, K: Pod, V: Pod> LpmTrie<T, K, V> {
                 map_type: map_type as u32,
             });
         }
-        let size = mem::size_of::<K>() + mem::size_of::<bpf_lpm_trie_key>();
+        let size = mem::size_of::<Key<K>>();
         let expected = map.obj.def.key_size as usize;
         if size != expected {
             return Err(MapError::InvalidKeySize { size, expected });
@@ -92,9 +92,9 @@ impl<T: Deref<Target = Map>, K: Pod, V: Pod> LpmTrie<T, K, V> {
     }
 
     /// Returns a copy of the value associated with the key.
-    pub fn get(&self, key: Key<K>, flags: u64) -> Result<V, MapError> {
+    pub fn get(&self, key: &Key<K>, flags: u64) -> Result<V, MapError> {
         let fd = self.inner.deref().fd_or_err()?;
-        let value = bpf_map_lookup_elem(fd, &key, flags).map_err(|(code, io_error)| {
+        let value = bpf_map_lookup_elem(fd, key, flags).map_err(|(code, io_error)| {
             MapError::SyscallError {
                 call: "bpf_map_lookup_elem".to_owned(),
                 code,
@@ -137,8 +137,7 @@ impl<T: Deref<Target = Map>, K: Pod, V: Pod> IterableMap<K, V> for LpmTrie<T, K,
     }
 
     fn get(&self, key: &K) -> Result<V, MapError> {
-        let lookup = Key::new(mem::size_of::<K>() as u32, *key);
-        self.get(lookup, 0)
+        self.get(&Key::new(mem::size_of::<K>() as u32, *key), 0)
     }
 }
 
